@@ -10,7 +10,9 @@ Verify what existed, when, and who registered it — directly from the chain.
 
 ## How it works
 
-Creators register artifacts through [anchorregistry.com](https://anchorregistry.com) and receive an immutable **AR-ID** — an on-chain anchor encoding the artifact's content hash, timestamp, and registrant. This package lets anyone verify and query those records. No API key. No account. Read-only.
+Creators register artifacts through [anchorregistry.com](https://anchorregistry.com) and receive an immutable **AR-ID** — an on-chain anchor encoding the artifact's content hash, timestamp, and registrant. This package queries those records directly from the Base blockchain — no intermediary API.
+
+No API key. No account. Read-only.
 
 ---
 
@@ -66,7 +68,7 @@ One line signals membership in a provenance tree — queryable by humans and AI 
 - **Read-only.** Registration happens through anchorregistry.com. This package only reads.
 - **No auth required.** Verification is open and free to anyone.
 - **Production parity.** This is the same library powering the Anchor Registry backend — not a separate wrapper.
-- **Built on Base.** Queries resolve directly against the Base (Ethereum L2) smart contract.
+- **Built on Base.** Queries resolve directly against the Base L2 chain. Base settles to Ethereum mainnet — provenance anchors inherit Ethereum-grade finality.
 
 ---
 
