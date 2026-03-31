@@ -14,7 +14,13 @@ from eth_abi import decode as abi_decode
 from anchorregistry.decoder import _decode_data_fields, _decode_event
 from anchorregistry.enums import ArtifactType
 from anchorregistry.exceptions import AnchorNotFoundError
-from anchorregistry.rpc import _connect, _fetch_anchor_data, _get_logs
+from anchorregistry.rpc import (
+    _connect,
+    _fetch_anchor_data,
+    _fetch_anchor_data_batch,
+    _fetch_transactions_batch,
+    _get_logs,
+)
 from anchorregistry.utils import _address_topic, _build_topic
 
 # Artifact types registered via registerTargeted (have a targetArId param).
@@ -38,6 +44,13 @@ SOFTWARE_TYPES = {"CODE"}
 
 # ── internal helpers ──────────────────────────────────────────────────
 
+def _decode_target_ar_id(tx: dict) -> str:
+    """Decode ``targetArId`` from a ``registerTargeted`` transaction object."""
+    calldata = bytes(tx["input"])[4:]  # strip 4-byte function selector
+    _, _, target_ar_id, _ = abi_decode(_TARGETED_INPUT_TYPES, calldata)
+    return target_ar_id
+
+
 def _fetch_target_ar_id(w3: Any, tx_hash: bytes) -> str:
     """Decode ``targetArId`` from a ``registerTargeted`` transaction.
 
@@ -45,9 +58,7 @@ def _fetch_target_ar_id(w3: Any, tx_hash: bytes) -> str:
     extract the ``targetArId`` parameter.
     """
     tx = w3.eth.get_transaction(tx_hash)
-    calldata = bytes(tx["input"])[4:]  # strip 4-byte function selector
-    _, _, target_ar_id, _ = abi_decode(_TARGETED_INPUT_TYPES, calldata)
-    return target_ar_id
+    return _decode_target_ar_id(tx)
 
 
 def _build_record(w3: Any, contract: Any, raw_log: dict) -> dict[str, Any]:
@@ -67,6 +78,46 @@ def _build_record(w3: Any, contract: Any, raw_log: dict) -> dict[str, Any]:
 
     record["data"] = data
     return record
+
+
+def _build_records(w3: Any, contract: Any, logs: list[dict]) -> list[dict[str, Any]]:
+    """Build complete two-level records from multiple logs using batch RPC.
+
+    Sends all ``getAnchorData`` calls in a single batch request, and
+    all ``eth_getTransaction`` calls for targeted types in a second batch.
+    Reduces N+1 RPC calls to 1 ``eth_getLogs`` + 1 batch ``getAnchorData``
+    + 1 batch ``eth_getTransaction``.
+    """
+    if not logs:
+        return []
+
+    # Phase 1: decode all events (no RPC needed).
+    records = [_decode_event(log) for log in logs]
+    ar_ids = [r["ar_id"] for r in records]
+
+    # Phase 2: batch-fetch all type-specific data.
+    extras = _fetch_anchor_data_batch(w3, contract, ar_ids)
+
+    # Phase 3: batch-fetch transactions for targeted types.
+    targeted_indices = [
+        i for i, r in enumerate(records) if r["artifact_type_index"] in _TARGETED_TYPES
+    ]
+    targeted_tx_hashes = [logs[i]["transactionHash"] for i in targeted_indices]
+    targeted_txs = _fetch_transactions_batch(w3, targeted_tx_hashes)
+
+    # Phase 4: assemble records.
+    targeted_tx_map = dict(zip(targeted_indices, targeted_txs))
+
+    for i, record in enumerate(records):
+        type_idx = record["artifact_type_index"]
+        data = _decode_data_fields(type_idx, extras[i])
+
+        if i in targeted_tx_map:
+            data["target_ar_id"] = _decode_target_ar_id(targeted_tx_map[i])
+
+        record["data"] = data
+
+    return records
 
 
 # ── public API ────────────────────────────────────────────────────────
@@ -127,7 +178,7 @@ def get_by_registrant(
     logs = _get_logs(
         w3, contract.address, deploy_block or 0, "latest", topic_2=topic
     )
-    return [_build_record(w3, contract, log) for log in logs]
+    return _build_records(w3, contract, logs)
 
 
 def get_by_tree(
@@ -154,7 +205,7 @@ def get_by_tree(
     logs = _get_logs(
         w3, contract.address, deploy_block or 0, "latest", topic_3=topic
     )
-    return [_build_record(w3, contract, log) for log in logs]
+    return _build_records(w3, contract, logs)
 
 
 def get_by_type(
@@ -208,7 +259,7 @@ def get_all(
     start = from_block if from_block is not None else (deploy_block or 0)
     end = to_block if to_block is not None else "latest"
     logs = _get_logs(w3, contract.address, start, end)
-    return [_build_record(w3, contract, log) for log in logs]
+    return _build_records(w3, contract, logs)
 
 
 def verify(

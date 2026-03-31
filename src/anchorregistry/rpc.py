@@ -104,3 +104,61 @@ def _fetch_anchor_data(contract: Any, ar_id: str) -> bytes:
         ABI-encoded type-specific extra data.
     """
     return bytes(contract.functions.getAnchorData(ar_id).call())
+
+
+def _fetch_anchor_data_batch(
+    w3: Web3, contract: Any, ar_ids: list[str]
+) -> list[bytes]:
+    """Batch-fetch ``getAnchorData`` for multiple AR-IDs in a single RPC call.
+
+    Parameters
+    ----------
+    w3:
+        Active Web3 instance.
+    contract:
+        Contract instance with ``getAnchorData`` function.
+    ar_ids:
+        List of AR-ID strings to fetch.
+
+    Returns
+    -------
+    list[bytes]
+        ABI-encoded extra data for each AR-ID, in the same order.
+    """
+    if not ar_ids:
+        return []
+
+    with w3.batch_requests() as batch:
+        for ar_id in ar_ids:
+            batch.add(contract.functions.getAnchorData(ar_id))
+        responses = batch.execute()
+
+    return [bytes(r) for r in responses]
+
+
+def _fetch_transactions_batch(
+    w3: Web3, tx_hashes: list[bytes]
+) -> list[dict]:
+    """Batch-fetch transactions by hash in a single RPC call.
+
+    Parameters
+    ----------
+    w3:
+        Active Web3 instance.
+    tx_hashes:
+        List of transaction hashes.
+
+    Returns
+    -------
+    list[dict]
+        Transaction objects in the same order.
+    """
+    if not tx_hashes:
+        return []
+
+    with w3.batch_requests() as batch:
+        for tx_hash in tx_hashes:
+            batch.add(w3.eth.get_transaction(tx_hash))
+        responses = batch.execute()
+
+    return list(responses)
