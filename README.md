@@ -211,6 +211,32 @@ from anchorregistry import ARTIFACT_TYPE_MAP, READ_ABI, CONTRACT_ADDRESS, DEPLOY
 
 ---
 
+## Testing
+
+### Unit tests (no RPC required)
+
+```bash
+python3 -m pytest tests/ -v --ignore=tests/test_client.py
+```
+
+### Full suite with Sepolia integration tests
+
+Create a `.env` file with your Sepolia RPC endpoint:
+
+```bash
+SEPOLIA_RPC_URL=https://sepolia.infura.io/v3/YOUR_KEY
+```
+
+Then run:
+
+```bash
+set -a && source .env && set +a && python3 -m pytest tests/ -v
+```
+
+Integration tests in `test_client.py` are automatically skipped when `SEPOLIA_RPC_URL` is not set.
+
+---
+
 ## Status
 
 > Alpha. Core library under active development against Sepolia testnet. API surface stable per spec. Not yet published to PyPI.
