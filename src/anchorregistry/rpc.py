@@ -74,7 +74,7 @@ def _get_logs(
     event_sig = (
         "0x"
         + Web3.keccak(
-            text="Anchored(string,address,uint8,string,string,string,string,string,string,string,string)"
+            text="Anchored(string,address,uint8,string,string,string,string,string,string,string,string,bytes32)"
         ).hex()
     )
 
