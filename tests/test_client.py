@@ -18,6 +18,7 @@ from anchorregistry.exceptions import AnchorNotFoundError
 
 TEST_CONTRACT = "0x9E1F48D3C46bc69a540d16511FaA76Add25A8451"
 TEST_RPC = os.environ.get("SEPOLIA_RPC_URL")
+TEST_AR_ID = "AR-2026-D5bqN06"  # known anchor on current Sepolia contract
 
 needs_rpc = pytest.mark.skipif(
     TEST_RPC is None, reason="SEPOLIA_RPC_URL not set"
@@ -39,15 +40,16 @@ def _configure_sepolia():
 
 @pytest.fixture(scope="session")
 def live_ar_id():
-    """Dynamically resolve a valid AR-ID from the active Sepolia contract."""
+    """Return the known test AR-ID for the active Sepolia contract."""
     if not TEST_RPC:
         pytest.skip("SEPOLIA_RPC_URL not set")
     configure(network="sepolia", rpc_url=TEST_RPC)
-    from anchorregistry import get_all
-    records = get_all()
-    if not records:
-        pytest.skip("No anchors found on Sepolia contract")
-    return records[0]["ar_id"]
+    from anchorregistry import get_by_arid
+    try:
+        get_by_arid(TEST_AR_ID)
+    except Exception:
+        pytest.skip(f"Test anchor {TEST_AR_ID} not found on Sepolia contract")
+    return TEST_AR_ID
 
 
 @needs_rpc
@@ -130,8 +132,7 @@ class TestGetAll:
 
         records = get_all()
         assert isinstance(records, list)
-        if len(records) == 0:
-            pytest.skip("No anchors on contract yet — register at least one first")
+        assert len(records) > 0
 
     def test_block_range(self, live_ar_id):
         from anchorregistry import get_by_arid, get_all
