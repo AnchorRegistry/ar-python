@@ -7,6 +7,8 @@ Reads provenance data directly from on-chain events via RPC with zero
 dependency on AnchorRegistry infrastructure.
 """
 
+__version__ = "0.1.5"
+
 from anchorregistry.client import (
     get_by_arid,
     get_by_registrant,
