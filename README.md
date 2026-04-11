@@ -6,7 +6,7 @@
 
 Verify what existed, when, and who registered it — directly from the chain.
 
-**DAPX-Anchor: [anchorregistry.ai/AR-2026-0000001](https://anchorregistry.ai/AR-2026-0000001)**
+**SPDX-Anchor: [anchorregistry.ai/AR-2026-pJ53j6K](https://anchorregistry.ai/AR-2026-pJ53j6K)**
 
 ---
 
