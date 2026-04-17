@@ -54,6 +54,10 @@ def configure(
     _explicit_address = contract_address
     _explicit_rpc_url = rpc_url
 
+    # Clear cached Web3 connections so new timeout/RPC settings take effect.
+    from anchorregistry.rpc import _w3_cache
+    _w3_cache.clear()
+
     # Keep module-level constants in sync for importers.
     addr, _, deploy_block = _resolve_config()
     _constants.CONTRACT_ADDRESS = addr

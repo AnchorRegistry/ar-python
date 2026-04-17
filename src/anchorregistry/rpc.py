@@ -14,6 +14,9 @@ from web3 import Web3
 from anchorregistry.abi import READ_ABI
 from anchorregistry.config import _resolve_config
 
+# ── constants ────────────────────────────────────────────────────────
+_DEFAULT_CHUNK_SIZE = 50_000
+
 # ── connection cache ──────────────────────────────────────────────────
 _w3_cache: dict[str, Web3] = {}
 
@@ -29,7 +32,9 @@ def _connect(rpc_url: str | None = None) -> tuple[Web3, Any, int | None]:
     addr, resolved_rpc, deploy_block = _resolve_config(rpc_url)
 
     if resolved_rpc not in _w3_cache:
-        _w3_cache[resolved_rpc] = Web3(Web3.HTTPProvider(resolved_rpc))
+        _w3_cache[resolved_rpc] = Web3(
+            Web3.HTTPProvider(resolved_rpc, request_kwargs={"timeout": 30})
+        )
     w3 = _w3_cache[resolved_rpc]
 
     contract = w3.eth.contract(
@@ -84,15 +89,47 @@ def _get_logs(
     while topics and topics[-1] is None:
         topics.pop()
 
-    logs = w3.eth.get_logs(
-        {
-            "address": Web3.to_checksum_address(contract_address),
-            "fromBlock": from_block,
-            "toBlock": to_block,
-            "topics": topics,
-        }
+    filter_params = {
+        "address": Web3.to_checksum_address(contract_address),
+        "fromBlock": from_block,
+        "toBlock": to_block,
+        "topics": topics,
+    }
+
+    # Fast path: single call works on generous RPCs.
+    try:
+        return list(w3.eth.get_logs(filter_params))
+    except Exception as exc:
+        msg = str(exc).lower()
+        if not any(
+            needle in msg
+            for needle in (
+                "block range", "block_range", "exceed",
+                "query returned more than", "payload too large", "413",
+                "timed out", "timeout",
+            )
+        ):
+            raise
+
+    # Chunked fallback for RPCs with block-range limits.
+    resolved_end = (
+        w3.eth.block_number if to_block == "latest" else int(to_block)
     )
-    return list(logs)
+    all_logs: list[dict] = []
+    chunk_start = from_block
+    while chunk_start <= resolved_end:
+        chunk_end = min(chunk_start + _DEFAULT_CHUNK_SIZE - 1, resolved_end)
+        chunk_logs = w3.eth.get_logs(
+            {
+                "address": filter_params["address"],
+                "fromBlock": chunk_start,
+                "toBlock": chunk_end,
+                "topics": topics,
+            }
+        )
+        all_logs.extend(chunk_logs)
+        chunk_start = chunk_end + 1
+    return all_logs
 
 
 def _fetch_anchor_data(contract: Any, ar_id: str) -> bytes:

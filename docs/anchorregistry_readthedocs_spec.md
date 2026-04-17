@@ -184,7 +184,7 @@ Deployed Contract
    * - Sepolia testnet
      - 0x9dAb9f5B754f8C56B5F7BAd3E92A8bDe7317AD29
      - 10562312
-     - https://sepolia.etherscan.io/address/0x9dAb9f5B...
+     - https://sepolia.basescan.org/address/0x9dAb9f5B754f8C56B5F7BAd3E92A8bDe7317AD29
 
 Anchored Event
 --------------
