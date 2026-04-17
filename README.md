@@ -26,13 +26,15 @@ Requires Python 3.11+
 ## Quickstart
 
 ```python
-from anchorregistry import get_by_arid
+from anchorregistry import configure, get_by_arid
 
-record = get_by_arid("AR-2026-Pvdp0W5")
-print(record["title"])        # DeFiPy GitHub
+configure(network="sepolia")
+
+record = get_by_arid("AR-2026-dPXazj6")
+print(record["title"])        # test sepolia anchor
 print(record["author"])       # Ian Moore
 print(record["manifest_hash"])
-print(record["data"]["language"])  # Python
+print(record["data"]["url"])  # https://anchorregistry.com/
 ```
 
 ---
@@ -43,7 +45,7 @@ print(record["data"]["language"])  # Python
 ```python
 from anchorregistry import get_by_arid
 
-record = get_by_arid("AR-2026-Pvdp0W5")
+record = get_by_arid("AR-2026-dPXazj6")
 ```
 
 ### Query by registrant wallet
@@ -57,7 +59,7 @@ records = get_by_registrant("0xc7a7afde1177fbf0bb265ea5a616d1b8d7ed8c44")
 ```python
 from anchorregistry import get_by_tree
 
-records = get_by_tree("ar-operator-v1")
+records = get_by_tree("0xf07140ce4deaf3b5dac859091a079f82e9656f173593feda7895d940b8fa5d13")
 ```
 
 ### Query by artifact type
@@ -81,8 +83,8 @@ records = get_all(from_block=10000000, to_block=10500000)    # block range
 ```python
 from anchorregistry import verify
 
-result = verify("AR-2026-Pvdp0W5")                          # record only
-result = verify("AR-2026-Pvdp0W5", file_path="./myfile.py") # + SHA256 check
+result = verify("AR-2026-dPXazj6")                          # record only
+result = verify("AR-2026-dPXazj6", file_path="./myfile.py") # + SHA256 check
 print(result["hash_match"])  # True / False
 ```
 
@@ -90,21 +92,21 @@ print(result["hash_match"])  # True / False
 ```python
 from anchorregistry import watermark
 
-line = watermark("AR-2026-Pvdp0W5", artifact_type="CODE")
-# → "SPDX-Anchor: anchorregistry.ai/AR-2026-Pvdp0W5"
+line = watermark("AR-2026-yPZBgoP", artifact_type="CODE")
+# → "SPDX-Anchor: anchorregistry.ai/AR-2026-yPZBgoP"
 
-line = watermark("AR-2026-Pvdp0W5", artifact_type="RESEARCH")
-# → "DAPX-Anchor: anchorregistry.ai/AR-2026-Pvdp0W5"
+line = watermark("AR-2026-dPXazj6", artifact_type="RESEARCH")
+# → "DAPX-Anchor: anchorregistry.ai/AR-2026-dPXazj6"
 
 # Resolves type from chain if not provided
-line = watermark("AR-2026-Pvdp0W5")
+line = watermark("AR-2026-dPXazj6")
 ```
 
 ### Authenticate anchor ownership
 ```python
 from anchorregistry import authenticate_anchor
 
-result = authenticate_anchor("0xabc123...", "AR-2026-Pvdp0W5")
+result = authenticate_anchor("0xf4accdf917e8cf2b9e0ceb0b281fba1c1a176f8922fb5eb432bfa0a5664b0680", "AR-2026-dPXazj6")
 print(result["authenticated"])  # True / False
 ```
 
@@ -114,7 +116,7 @@ The ownership token (`K`) is a `0x`-prefixed bytes32 hex string generated client
 ```python
 from anchorregistry import authenticate_tree
 
-result = authenticate_tree("0xabc123...", "AR-2026-Pvdp0W5")
+result = authenticate_tree("0xf4accdf917e8cf2b9e0ceb0b281fba1c1a176f8922fb5eb432bfa0a5664b0680", "AR-2026-dPXazj6")
 print(result["authenticated"])      # True if tree ownership + all anchors verified
 print(result["anchors_verified"])   # count of verified user-initiated anchors
 print(result["governance_count"])   # governance anchors (skipped, bytes32(0))
@@ -167,28 +169,27 @@ Every record follows a consistent two-level structure regardless of artifact typ
 ```python
 {
     # Universal fields — identical for every type
-    "ar_id":                "AR-2026-Pvdp0W5",
+    "ar_id":                "AR-2026-dPXazj6",
     "registered":           True,
-    "artifact_type_index":  0,
-    "artifact_type_name":   "CODE",
-    "tx":                   "0xe36116...",
-    "block":                10533679,
+    "artifact_type_index":  1,
+    "artifact_type_name":   "RESEARCH",
+    "tx":                   "0x826f62...",
+    "block":                40225238,
     "registrant":           "0xc7a7af...",
-    "manifest_hash":        "3e2d69...",
+    "manifest_hash":        "...",
     "parent_ar_id":         "",
-    "descriptor":           "DeFiPy: Python SDK for DeFi Analytics and Agents",
-    "title":                "DeFiPy GitHub",
+    "descriptor":           "test sepolia anchor",
+    "title":                "test sepolia anchor",
     "author":               "Ian Moore",
-    "tree_id":              "ar-operator-v1",
-    "token_commitment":     "0x3e2d69...",   # keccak256(K || arId), bytes32(0) for governance
+    "tree_id":              "0xf07140...",
+    "token_commitment":     "0xf07140...",   # keccak256(K || arId), bytes32(0) for governance
 
     # Type-specific fields — only fields for this artifact type
     "data": {
-        "git_hash":  "18afe3d...",
-        "license":   "MIT",
-        "language":  "Python",
-        "version":   "v1.0.0",
-        "url":       "https://github.com/defipy-devs/defipy"
+        "doi":          "",
+        "institution":  "",
+        "co_authors":   "",
+        "url":          "https://anchorregistry.com/"
     }
 }
 ```
